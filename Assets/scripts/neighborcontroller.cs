@@ -1,23 +1,36 @@
 using UnityEngine;
 
-public class neighborcontroller : MonoBehaviour
+public class NeighbourController : MonoBehaviour
 {
-    Animator animator;
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    private Animator animator;
+
+    [Header("Timing")]
+    public float minWakeTime = 3f;
+    public float maxWakeTime = 10f;
+    public bool IsAware = false;
+
+    private float nextWakeTime;
+
     void Start()
-
     {
-        animator = GetComponent<Animator>();   
+        animator = GetComponent<Animator>();
+
+        ScheduleNextWake();
     }
 
-    public void WakeNeighbor()
-  {
-        animator.SetTrigger("WakeUp");
-    }
-
-    public void Smoke()
+    void Update()
     {
-        animator.SetTrigger("Smoke");
-    }
-  }
+        if (Time.time >= nextWakeTime)
+        {
+            animator.SetTrigger("WakeUp");
+            IsAware = true;
 
+            ScheduleNextWake();
+        }
+    }
+
+    void ScheduleNextWake()
+    {
+        nextWakeTime = Time.time + Random.Range(minWakeTime, maxWakeTime);
+    }
+}
