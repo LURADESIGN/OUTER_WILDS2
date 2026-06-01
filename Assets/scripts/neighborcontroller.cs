@@ -4,33 +4,64 @@ public class NeighbourController : MonoBehaviour
 {
     private Animator animator;
 
-    [Header("Timing")]
-    public float minWakeTime = 3f;
-    public float maxWakeTime = 10f;
-    public bool IsAware = false;
+    [Header("Random Timing")]
+    public float minDecisionTime = 2f;
+    public float maxDecisionTime = 6f;
 
-    private float nextWakeTime;
+    [Header("Animator State Names")]
+    public string wakeUpStateName = "main_rig|wake_up";
+
+    private float nextDecisionTime;
 
     void Start()
     {
         animator = GetComponent<Animator>();
 
-        ScheduleNextWake();
+        if (animator == null)
+        {
+            Debug.LogError("NeighbourController: No Animator found on this GameObject.");
+            enabled = false;
+            return;
+        }
+
+        ScheduleNextDecision();
     }
 
     void Update()
     {
-        if (Time.time >= nextWakeTime)
+        if (Time.time >= nextDecisionTime)
         {
-            animator.SetTrigger("WakeUp");
-            IsAware = true;
-
-            ScheduleNextWake();
+            MakeDecision();
+            ScheduleNextDecision();
         }
     }
 
-    void ScheduleNextWake()
+    void MakeDecision()
     {
-        nextWakeTime = Time.time + Random.Range(minWakeTime, maxWakeTime);
+        int choice = Random.Range(0, 2);
+
+        if (choice == 0)
+        {
+            animator.SetTrigger("Smoke");
+        }
+        else
+        {
+            animator.SetTrigger("WakeUp");
+        }
+    }
+
+    void ScheduleNextDecision()
+    {
+        nextDecisionTime = Time.time + Random.Range(minDecisionTime, maxDecisionTime);
+    }
+
+    public bool IsAlert()
+    {
+        if (animator == null)
+            return false;
+
+        AnimatorStateInfo state = animator.GetCurrentAnimatorStateInfo(0);
+
+        return state.IsName(wakeUpStateName);
     }
 }
