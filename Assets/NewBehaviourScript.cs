@@ -1,8 +1,8 @@
-
 using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
 {
+    [Header("Movement")]
     public CharacterController controller;
 
     public float speed = 5f;
@@ -10,9 +10,13 @@ public class PlayerMovement : MonoBehaviour
     public float jumpHeight = 1.5f;
     public float turnSpeed = 10f;
 
+    [Header("Ground Check")]
     public Transform groundCheck;
     public float groundDistance = 0.2f;
     public LayerMask groundMask;
+
+    [Header("Animation")]
+    public Animator animator;
 
     Vector3 velocity;
     bool isGrounded;
@@ -21,7 +25,25 @@ public class PlayerMovement : MonoBehaviour
 
     void Start()
     {
-        controller = GetComponent<CharacterController>();
+        if (controller == null)
+        {
+            controller = GetComponent<CharacterController>();
+        }
+
+        if (animator == null)
+        {
+            animator = GetComponentInChildren<Animator>();
+        }
+
+        if (controller == null)
+        {
+            Debug.LogError("PlayerMovement: No CharacterController found on this GameObject.");
+        }
+
+        if (animator == null)
+        {
+            Debug.LogWarning("PlayerMovement: No Animator found. Movement still works, but animations will not play.");
+        }
     }
 
     void Update()
@@ -51,37 +73,62 @@ public class PlayerMovement : MonoBehaviour
 
         Vector3 inputMove = forward * z + right * x;
 
-        // GROND BEWEGING
+        // Prevent faster diagonal movement
+        inputMove = Vector3.ClampMagnitude(inputMove, 1f);
+
+        // Ground movement
         if (isGrounded)
         {
-            // Rotatie alleen als je beweegt
+            // Rotate only while moving
             if (inputMove.magnitude > 0.1f)
             {
                 Quaternion targetRotation = Quaternion.LookRotation(inputMove);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, turnSpeed * Time.deltaTime);
+                transform.rotation = Quaternion.Slerp(
+                    transform.rotation,
+                    targetRotation,
+                    turnSpeed * Time.deltaTime
+                );
             }
 
-            // Beweging op de grond
+            // Move on ground
             controller.Move(inputMove * speed * Time.deltaTime);
 
-            // HIER slaan we momentum op (belangrijk!)
+            // Store air momentum
             airMoveDirection = inputMove * speed;
         }
         else
         {
-            // In de lucht: gebruik opgeslagen momentum
+            // In air: keep stored momentum
             controller.Move(airMoveDirection * Time.deltaTime);
         }
 
-        // SPRINGEN
+        // Jump
         if (Input.GetButtonDown("Jump") && isGrounded)
         {
             velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+
+            if (animator != null)
+            {
+                animator.SetTrigger("Jump");
+            }
         }
 
-        // Zwaartekracht
+        // Gravity
         velocity.y += gravity * Time.deltaTime;
         controller.Move(velocity * Time.deltaTime);
+
+        // Animation update
+        UpdateAnimations(inputMove);
     }
 
+    void UpdateAnimations(Vector3 inputMove)
+    {
+        if (animator == null)
+            return;
+
+        float movementAmount = inputMove.magnitude;
+
+        animator.SetFloat("Speed", movementAmount);
+        animator.SetBool("Grounded", isGrounded);
+    }
 }

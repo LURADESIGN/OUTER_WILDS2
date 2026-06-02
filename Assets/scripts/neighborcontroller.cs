@@ -4,11 +4,16 @@ public class NeighbourController : MonoBehaviour
 {
     private Animator animator;
 
+    [Header("Waking Up Detection Window")]
+    [SerializeField] private float safeTimeStart = 0.5f;
+    [SerializeField] private float safeTimeEnd = 0.58f;
+
     [Header("Random Timing")]
     public float minDecisionTime = 2f;
     public float maxDecisionTime = 6f;
 
     [Header("Animator State Names")]
+    public string idleStateName = "main_rig|sleeping";
     public string wakeUpStateName = "main_rig|wake_up";
 
     private float nextDecisionTime;
@@ -29,7 +34,7 @@ public class NeighbourController : MonoBehaviour
 
     void Update()
     {
-        if (Time.time >= nextDecisionTime)
+        if (Time.time >= nextDecisionTime && IsIdle())
         {
             MakeDecision();
             ScheduleNextDecision();
@@ -55,6 +60,12 @@ public class NeighbourController : MonoBehaviour
         nextDecisionTime = Time.time + Random.Range(minDecisionTime, maxDecisionTime);
     }
 
+    private bool IsIdle()
+    {
+        AnimatorStateInfo state = animator.GetCurrentAnimatorStateInfo(0);
+        return state.IsName(idleStateName);
+    }
+
     public bool IsAlert()
     {
         if (animator == null)
@@ -62,6 +73,18 @@ public class NeighbourController : MonoBehaviour
 
         AnimatorStateInfo state = animator.GetCurrentAnimatorStateInfo(0);
 
-        return state.IsName(wakeUpStateName);
+        if (!state.IsName(wakeUpStateName))
+            return false;
+
+        float animationLength = state.length;
+
+        float normalizedTime = state.normalizedTime % 1f;
+        float currentTime = normalizedTime * animationLength;
+        float timeRemaining = animationLength - currentTime;
+
+        bool afterSafeStart = currentTime > safeTimeStart;
+        bool beforeSafeEnd = timeRemaining > safeTimeEnd;
+
+        return afterSafeStart && beforeSafeEnd;
     }
 }
